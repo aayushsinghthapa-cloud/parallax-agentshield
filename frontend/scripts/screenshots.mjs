@@ -80,6 +80,19 @@ await page.getByText(/chain intact|chain broken/).waitFor();
 results.push("audit: " + (await page.getByText(/chain intact|chain broken/).innerText()));
 await page.screenshot({ path: OUT + "audit.png" });
 
+for (const sid of ["S2", "S5"]) {
+  await page.goto(`${BASE}/?compare=${sid}`);
+  await page.waitForFunction(() => {
+    const t = document.body.innerText;
+    const done = (t.match(/leaks? to the attacker|nothing leaked/g) || []).length;
+    return done === 2 && !t.includes("running…") && !t.includes("waiting…");
+  }, null, { timeout: 120_000, polling: 300 });
+  await page.waitForTimeout(700);
+  await page.screenshot({ path: OUT + `compare_${sid}.png` });
+  const heads = await page.locator("section > div:first-child").allInnerTexts();
+  results.push(`compare ${sid}: ` + heads.map((h) => h.replace(/\n/g, " ")).join(" | "));
+}
+
 await page.goto(`${BASE}/?results=1`);
 await page.getByText("attack variants stopped").waitFor();
 await page.waitForTimeout(400);

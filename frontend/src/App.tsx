@@ -7,6 +7,7 @@ import {
 } from "./components";
 import { AttackStrip } from "./strip";
 import { ResultsModal } from "./results";
+import { CompareView } from "./compare";
 
 type Tab = "decisions" | "audit" | "attacker";
 
@@ -22,6 +23,7 @@ export default function App() {
   const [payload, setPayload] = useState("");
   const [backendDown, setBackendDown] = useState(false);
   const [showResults, setShowResults] = useState(false);
+  const [compare, setCompare] = useState<string | null>(null);
   const autorun = useRef(false);
 
   const current = runs[runs.length - 1];
@@ -52,6 +54,7 @@ export default function App() {
     if (!config || autorun.current) return;
     const q = new URLSearchParams(location.search);
     if (q.get("results")) setShowResults(true);
+    if (q.get("compare")) { autorun.current = true; setCompare(q.get("compare")); return; }
     const sid = q.get("run");
     const sh = (q.get("shield") as Shield) || "on";
     const sc = config.scenarios.find((s) => s.id === sid);
@@ -80,6 +83,13 @@ export default function App() {
             Untrusted content cannot cause tool calls or data flows outside the user's task contract.
           </div>
           <div className="ml-auto flex items-center gap-3">
+            <button
+              onClick={() => setCompare(current && current.scenario.match(/^S\d$/) ? current.scenario : "S2")}
+              disabled={busy || !config}
+              className="rounded-md border border-red/60 text-red px-2.5 py-0.5 text-[13px] font-semibold hover:bg-red/10 disabled:opacity-40"
+            >
+              Compare OFF / ON
+            </button>
             <button onClick={() => setShowResults(true)} className="rounded-md border border-line px-2.5 py-0.5 text-[13px] font-semibold hover:border-mute">Results</button>
             <Counters runs={runs} />
             <ShieldToggle shield={shield} onChange={setShield} disabled={busy} />
@@ -204,6 +214,7 @@ export default function App() {
       </main>
 
       {showResults && <ResultsModal onClose={() => setShowResults(false)} />}
+      {compare && config && <CompareView config={config} initial={compare} onClose={() => setCompare(null)} />}
       {current?.approval && current.shield === "on" && (
         <ApprovalModal key={current.approval.decision.decision_id} pending={current.approval} timeoutS={config?.approval_timeout_s ?? 120} onAnswer={answer} />
       )}
