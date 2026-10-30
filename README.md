@@ -162,7 +162,7 @@ node frontend/scripts/screenshots.mjs                                          #
 - **Secret detection is pattern-based.** It catches raw, base64, hex, URL-encoded, split and fragment forms. A secret broken into pieces shorter than 10 characters and scattered through a body would get past it. Any external send after a vault read still asks (the second half of rule 4).
 - **The confidential-document rule is coarse.** Once a confidential doc is read, every external send asks. We don't try to detect paraphrases.
 - **The tools are simulated.** `send_email` writes to a JSONL outbox, `fetch_url` never touches the network, and `delete_files` deletes nothing.
-- **An MCP proxy, if built, would only infer taint by matching values.** It can't see which tool results the model actually read.
+- **The MCP proxy has no approval UI.** `REQUIRE_APPROVAL` is refused (fail closed). It also needs the user's request passed as `--task`, because MCP has no user turn, and upstream tool names must match LEASH's registry. Anything else is denied.
 
 ## Integration story
 
@@ -176,7 +176,20 @@ if decision.verdict == "ALLOW":
     ctx.observe(name, args, output)  # taints the session if the tool is untrusted
 ```
 
-The natural next step is an **MCP `tools/call` proxy**. It would sit between any MCP client and server, call `guard()` on each request and write the same audit log.
+The same guard also sits in front of any **MCP server** (stretch build). `leash-mcp` is a stdio proxy:
+
+- it forwards every message unchanged, except `tools/call`, where it calls `guard()` first;
+- a denial goes back to the client as an MCP tool error, and the upstream server never sees the call;
+- tool results pass back through `observe()`, so untrusted output taints the session;
+- it waits for in-flight results before deciding, so a pipelining client can't race past the taint;
+- every decision is written to the same hash-chained audit log.
+
+```bash
+./leash-mcp --task "Reply to Priya confirming the meeting time she proposed." \
+            --upstream "backend/.venv/bin/python -m backend.mcp.fake_server"
+```
+
+`backend/mcp/fake_server.py` is a two-tool demo server whose email #5 carries an injection. `backend/tests/test_mcp.py` drives the real proxy over stdio end to end.
 
 ## References and attribution
 

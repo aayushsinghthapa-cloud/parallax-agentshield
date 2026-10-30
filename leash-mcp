@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+# leash-mcp: put the LEASH guard in front of any stdio MCP server.
+#   ./leash-mcp --task "Reply to Priya confirming the meeting time" --upstream "python -m backend.mcp.fake_server"
+set -euo pipefail
+cd "$(dirname "$0")"
+exec backend/.venv/bin/python -m backend.mcp.proxy "$@"
