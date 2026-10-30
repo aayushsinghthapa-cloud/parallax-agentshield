@@ -20,6 +20,7 @@ from pydantic import BaseModel
 
 from backend.agent import runner
 from backend.agent.provider import configured_providers, key_status
+from backend.agent.replay import is_scripted
 from backend.guard.audit import AuditLog
 from backend.guard.contract import compile_contract, load_workspace
 from backend.scenarios import SCENARIOS
@@ -98,7 +99,8 @@ def run_stream(scenario: str | None = None, message: str | None = None, payload:
 
     def stream():
         yield _sse("start", {"run_id": run_id, "scenario": sid, "message": msg, "shield": shield,
-                             "planner_mode": runner.planner_mode(), "llm_mode": llm or runner.llm_mode()})
+                             "planner_mode": runner.planner_mode(), "llm_mode": llm or runner.llm_mode(),
+                             "scripted": (llm or runner.llm_mode()) == "replay" and is_scripted(sid, shield)})
         while True:
             try:
                 ev, data = q.get(timeout=15)

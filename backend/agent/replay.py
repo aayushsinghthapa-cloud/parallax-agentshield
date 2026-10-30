@@ -48,6 +48,15 @@ def replay_path(scenario_id: str, shield: str) -> Path:
     return REPLAY_DIR / f"{scenario_id}_{shield}.json"
 
 
+def is_scripted(scenario_id: str, shield: str) -> bool:
+    """True if this recording came from a hand-scripted LLM, not a real model (the UI labels it)."""
+    p = replay_path(scenario_id, shield)
+    try:
+        return bool(json.loads(p.read_text()).get("scripted"))
+    except (OSError, ValueError):
+        return False
+
+
 class Planner:
     """Same .chat(messages, tools) interface as Provider, with fallback and record/replay."""
 
