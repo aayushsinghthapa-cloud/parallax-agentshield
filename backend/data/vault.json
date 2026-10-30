@@ -1,0 +1,5 @@
+{
+  "AWS_ACCESS_KEY": {"label": "AWS access key", "sensitivity": "secret", "value": "sk-FAKE-AKIA7NIMBUSDEMO0042"},
+  "STRIPE_KEY": {"label": "Stripe API key", "sensitivity": "secret", "value": "sk-FAKE-live-51NimbusDemoKey9x"},
+  "DB_PASSWORD": {"label": "database password", "sensitivity": "secret", "value": "FAKE-db-Pa55-nimbus-0xC0FFEE"}
+}

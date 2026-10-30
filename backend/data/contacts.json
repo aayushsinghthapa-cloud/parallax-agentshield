@@ -1,0 +1,10 @@
+{
+  "user": {"name": "Aarav Mehta", "email": "aarav@nimbus.test", "role": "Ops lead", "org": "Nimbus Labs"},
+  "internal_domain": "nimbus.test",
+  "contacts": [
+    {"name": "Priya Sharma", "aliases": ["Priya"], "email": "priya@nimbus.test"},
+    {"name": "Bob Fernandes", "aliases": ["Bob"], "email": "bob@nimbus.test"},
+    {"name": "Meera Iyer", "aliases": ["Meera", "finance"], "email": "meera@nimbus.test"},
+    {"name": "External auditor", "aliases": ["auditor", "the auditor", "Ledgerwise"], "email": "audit@ledgerwise.example"}
+  ]
+}
