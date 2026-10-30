@@ -2,7 +2,7 @@
 
     leash-mcp --task "Reply to Priya confirming the meeting time" --upstream "python -m backend.mcp.fake_server"
 
-MCP clients (Claude Desktop, IDEs, ...) talk to this process exactly as they would to the upstream
+MCP clients (desktop assistants, IDEs, ...) talk to this process exactly as they would to the upstream
 server. Every message is forwarded unchanged, except:
 
 - tools/call: guard(call, ctx) decides first. DENY and REQUIRE_APPROVAL (there's no approval UI here,
