@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import time
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -60,7 +61,8 @@ def is_scripted(scenario_id: str, shield: str) -> bool:
 class Planner:
     """Same .chat(messages, tools) interface as Provider, with fallback and record/replay."""
 
-    def __init__(self, providers: list[Provider], llm_mode: str = "live", scenario_id: str = "custom", shield: str = "on"):
+    def __init__(self, providers: list[Provider], llm_mode: str = "live", scenario_id: str = "custom", shield: str = "on",
+                 replay_delay_s: float = 0.0):
         self.providers = providers
         self.llm_mode = llm_mode
         self.scenario_id = scenario_id
@@ -68,6 +70,7 @@ class Planner:
         self.step = 0
         self.records: list[dict] = []
         self.last_source = "live"  # "replay" or the provider label that answered
+        self.replay_delay_s = replay_delay_s  # UI pacing only: a replayed "thinking" pause so the path animates
         self._recording = self._load() if llm_mode == "replay" else []
 
     @property
@@ -86,6 +89,7 @@ class Planner:
             # Fallback: closest match by scenario and step (e.g. a policy wording change altered a denial text).
             rec = exact or next((r for r in self._recording if r["step"] == step), None)
             if rec:
+                time.sleep(self.replay_delay_s)
                 self.last_source = "replay" if exact else "replay~"
                 return _to_message(rec["response"], step)
             if not self.providers:

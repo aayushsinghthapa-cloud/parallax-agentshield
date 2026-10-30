@@ -70,7 +70,7 @@ class AuditLog:
             "verdict": decision.verdict if shield_mode == "on" else "EXECUTED",
             "would_have": decision.verdict if shield_mode != "on" else None,
             "reason_plain": redact(decision.reason_plain, secrets),
-            "source_ref": decision.source_ref,
+            "source_ref": redact(decision.source_ref, secrets),
             "approver": approver,
             "latency_ms": decision.latency_ms,
             "policy_version": decision.policy_version,

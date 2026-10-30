@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import uuid
+from urllib.parse import urlparse
 from typing import Callable
 
 from backend.agent.prompts import system_prompt
@@ -128,14 +129,14 @@ def _handle_call(call_id, name, args, valid, rec, world, ctx, shield, send, appr
         rec["decision"] = d.to_dict()
         if audit:
             audit.append(decision=d, call=call, ctx=ctx, session_id=session_id, shield_mode=shield)
-        send("decision", call_id=call_id, shield=shield, decision=d.to_dict(),
+        send("decision", call_id=call_id, shield=shield, decision=redact(d.to_dict(), secrets),
              would_have=d.verdict if shield == "off" else None)
         if shield == "on":
             if d.verdict == "DENY":
                 run_it = False
                 content = f"[LEASH] Action denied: {d.reason_plain} Nothing was sent."
             elif d.verdict == "REQUIRE_APPROVAL":
-                send("approval_required", call_id=call_id, decision=d.to_dict(), tool=name,
+                send("approval_required", call_id=call_id, decision=redact(d.to_dict(), secrets), tool=name,
                      args=redact(args, secrets), user_request=ctx.contract.user_request)
                 choice = approve(d.to_dict(), call) if approve else "deny"
                 choice = choice if choice in ("approve", "deny") else "deny"
@@ -155,11 +156,17 @@ def _handle_call(call_id, name, args, valid, rec, world, ctx, shield, send, appr
     rec["executed"] = True
     src = ctx.observe(name, args, out)
     if src:
-        send("taint_set", source=src.ref, kind=src.kind, tool=name)
+        send("taint_set", source=redact(src.ref, secrets), kind=src.kind, tool=name)
     send("tool_result", call_id=call_id, tool=name, executed=True, result=_truncate(redact(out, secrets)))
     if name == "send_email" and world.sent:
         m = world.sent[-1]
         for addr in recipients_of(m["to"]):
             # Unredacted on purpose: with the shield off this IS the leak the demo shows.
             send("outbox", to=addr, subject=m["subject"], body=m["body"], **classify_recipient(addr, world))
+    if name == "fetch_url":
+        # A fetched URL is a sink too: whatever is in it reaches that server.
+        host = urlparse(str(args.get("url", ""))).hostname or "?"
+        internal = host == world.contacts["internal_domain"] or host.endswith("." + world.contacts["internal_domain"])
+        send("outbox", to=host, subject="Web request (data rides in the URL)", body=str(args.get("url", "")),
+             internal=internal, attacker=not internal)
     return out

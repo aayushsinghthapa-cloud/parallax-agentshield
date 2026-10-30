@@ -34,10 +34,10 @@ def resolve(scenario: str | None, message: str | None = None, payload: str | Non
 
 def run(scenario_id: str, message: str, extra_emails: list[dict], shield: str, *, emit=None, approve=None,
         audit: AuditLog | None = None, session_id: str = "cli", run_id: str | None = None,
-        mode: str | None = None, llm: str | None = None) -> tuple[dict, Planner, World]:
+        mode: str | None = None, llm: str | None = None, replay_delay_s: float = 0.0) -> tuple[dict, Planner, World]:
     llm = llm or llm_mode()
     # Free text and live payloads can't be replayed (nothing was recorded for them), so they go live.
-    planner = Planner(configured_providers(), llm, scenario_id, shield)
+    planner = Planner(configured_providers(), llm, scenario_id, shield, replay_delay_s)
     world = World(extra_emails=extra_emails, outbox_path=OUTBOX_PATH)
     result = run_agent(message, world, planner, mode or planner_mode(), shield=shield, emit=emit,
                        approve=approve, audit=audit, session_id=session_id, run_id=run_id)

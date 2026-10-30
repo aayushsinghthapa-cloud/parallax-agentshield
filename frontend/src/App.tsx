@@ -3,8 +3,9 @@ import type { Config, Mail, Run, RunRequest, Shield } from "./api";
 import { approve, getJSON, newRun, reduce, streamRun } from "./api";
 import type { AuditEntry } from "./components";
 import {
-  ApprovalModal, AttackerInbox, AuditTab, Badge, Chat, Counters, DecisionFeed, Logo, PathRow, Pill, ShieldToggle, Trace,
+  ApprovalModal, AttackerInbox, AuditTab, Badge, Chat, Counters, DecisionFeed, Logo, Pill, ShieldToggle, Trace,
 } from "./components";
+import { AttackStrip } from "./strip";
 
 type Tab = "decisions" | "audit" | "attacker";
 
@@ -155,7 +156,7 @@ export default function App() {
         <section className="min-h-0 flex flex-col gap-3">
           <div className="rounded-xl border border-line bg-panel p-3">
             <div className="text-[12px] uppercase tracking-widest text-mute mb-2">Attack path</div>
-            <PathRow run={current} />
+            <AttackStrip run={current} />
           </div>
           <div className="flex-1 min-h-0 overflow-y-auto rounded-xl border border-line bg-panel p-3">
             <div className="text-[12px] uppercase tracking-widest text-mute mb-2">

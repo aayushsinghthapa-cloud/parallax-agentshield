@@ -9,6 +9,7 @@ APPROVAL_TIMEOUT_S passes, which counts as "deny" (fail closed).
 from __future__ import annotations
 
 import json
+import os
 import queue
 import threading
 import uuid
@@ -26,6 +27,7 @@ from backend.guard.contract import compile_contract, load_workspace
 from backend.scenarios import SCENARIOS
 
 APPROVAL_TIMEOUT_S = 120
+REPLAY_DELAY_S = float(os.getenv("REPLAY_DELAY_S", "0.8"))  # pace replayed steps so the UI can be followed
 
 app = FastAPI(title="LEASH")
 app.add_middleware(CORSMiddleware, allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
@@ -88,7 +90,7 @@ def run_stream(scenario: str | None = None, message: str | None = None, payload:
     def work() -> None:
         try:
             result, _, _ = runner.run(sid, msg, extra, shield, emit=emit, approve=approve, audit=audit,
-                                      session_id="ui", run_id=run_id, llm=llm)
+                                      session_id="ui", run_id=run_id, llm=llm, replay_delay_s=REPLAY_DELAY_S)
             q.put(("done", {"run_id": run_id, "scenario": sid, "shield": shield, "llm_source": result["llm_source"],
                             "calls": result["calls"], "error": result["error"]}))
         except Exception as e:  # never leave the browser hanging

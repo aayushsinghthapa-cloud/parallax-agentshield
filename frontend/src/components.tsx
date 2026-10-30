@@ -79,6 +79,12 @@ export function VerdictChip({ verdict, shield }: { verdict: Verdict; shield: Shi
   return <span className={`rounded border px-2 py-0.5 text-[12px] font-bold whitespace-nowrap ${c} ${verdict === "DENY" ? "slam" : ""}`}>{label}</span>;
 }
 
+/** With the shield off the guard only watched, so its reason is quoted, not stated as fact. */
+function Reason({ d, shield }: { d: Decision; shield: Shield }) {
+  if (shield === "off" && d.verdict !== "ALLOW") return <>LEASH would have said: “{d.reason_plain}”</>;
+  return <>{d.reason_plain}</>;
+}
+
 // --- left column -----------------------------------------------------------------------
 
 export function Chat({ runs }: { runs: Run[] }) {
@@ -115,32 +121,7 @@ export function Chat({ runs }: { runs: Run[] }) {
   );
 }
 
-// --- centre: compact path + live trace --------------------------------------------------
-
-export function PathRow({ run }: { run?: Run }) {
-  const tainted = !!run?.taint.length;
-  const vault = !!run?.calls.some((c) => c.tool === "read_vault");
-  const blocked = !!run?.calls.some((c) => c.decision && c.decision.verdict !== "ALLOW" && !c.executed && run.shield === "on");
-  const sent = !!run?.outbox.some((m) => !m.attacker);
-  const leaked = !!run?.outbox.some((m) => m.attacker);
-  const node = (label: string, tone: string) => (
-    <span className={`rounded-lg border px-1.5 py-1 text-[13px] font-semibold whitespace-nowrap ${tone}`}>{label}</span>
-  );
-  const arrow = <span className="text-mute">→</span>;
-  return (
-    <div className="flex flex-wrap items-center gap-1" aria-label="attack path">
-      {node("You", "border-green/60 text-green")}
-      {arrow}
-      {node("Inbox / Docs", tainted ? "border-red text-red bg-red/10" : "border-line text-mute")}
-      {node("Vault", vault ? "border-amber text-amber bg-amber/10" : "border-line text-mute")}
-      {arrow}
-      {node(blocked ? "LEASH gate · shut" : "LEASH gate", blocked ? "border-red bg-red text-white slam" : "border-line text-ink")}
-      {arrow}
-      {node("Outbox", sent ? "border-green/60 text-green" : "border-line text-mute")}
-      {node("Attacker's inbox", leaked ? "border-red bg-red/20 text-red" : "border-line text-mute")}
-    </div>
-  );
-}
+// --- centre: live trace -----------------------------------------------------------------
 
 export function Trace({ run }: { run?: Run }) {
   const end = useRef<HTMLDivElement>(null);
@@ -158,7 +139,7 @@ export function Trace({ run }: { run?: Run }) {
               </div>
               {c.decision && (
                 <div className="text-[14px] text-mute mt-1">
-                  {c.decision.reason_plain}
+                  <Reason d={c.decision} shield={run.shield} />
                   {c.approval && <span className="text-amber"> · You said {c.approval === "approve" ? "yes, once" : "no"}.</span>}
                   {run.shield === "on" && c.executed === false && <span className="text-ink"> Nothing was sent.</span>}
                 </div>
@@ -202,7 +183,7 @@ function DecisionCard({ run, call }: { run: Run; call: Call }) {
         <span className="text-[11px] text-mute">{run.scenario}</span>
       </div>
       <div className="text-[14px] font-semibold mt-1.5 [overflow-wrap:anywhere]">{describeCall(call)}</div>
-      <div className="text-[14px] mt-0.5">{d.reason_plain}</div>
+      <div className="text-[14px] mt-0.5"><Reason d={d} shield={run.shield} /></div>
       {blocked && <div className="text-[14px] font-semibold mt-0.5">Nothing was sent.</div>}
       <button onClick={() => setOpen(!open)} className="text-[12px] text-mute underline mt-1">
         {open ? "hide details" : "details"}
