@@ -13,6 +13,7 @@ import os
 import queue
 import threading
 import uuid
+from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
@@ -134,6 +135,15 @@ def approve(body: ApproveBody):
     slot["choice"] = "approve" if body.choice == "approve" else "deny"
     slot["event"].set()
     return {"ok": True, "choice": slot["choice"]}
+
+
+@app.get("/api/results")
+def results():
+    """Evidence from backend/scripts/eval.py (docs/results.json)."""
+    p = Path(__file__).resolve().parent.parent / "docs" / "results.json"
+    if not p.exists():
+        raise HTTPException(404, "run backend/scripts/eval.py first")
+    return json.loads(p.read_text())
 
 
 @app.get("/api/audit")

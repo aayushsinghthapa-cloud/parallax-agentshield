@@ -6,6 +6,7 @@ import {
   ApprovalModal, AttackerInbox, AuditTab, Badge, Chat, Counters, DecisionFeed, Logo, Pill, ShieldToggle, Trace,
 } from "./components";
 import { AttackStrip } from "./strip";
+import { ResultsModal } from "./results";
 
 type Tab = "decisions" | "audit" | "attacker";
 
@@ -20,6 +21,7 @@ export default function App() {
   const [text, setText] = useState("");
   const [payload, setPayload] = useState("");
   const [backendDown, setBackendDown] = useState(false);
+  const [showResults, setShowResults] = useState(false);
   const autorun = useRef(false);
 
   const current = runs[runs.length - 1];
@@ -49,6 +51,7 @@ export default function App() {
   useEffect(() => {
     if (!config || autorun.current) return;
     const q = new URLSearchParams(location.search);
+    if (q.get("results")) setShowResults(true);
     const sid = q.get("run");
     const sh = (q.get("shield") as Shield) || "on";
     const sc = config.scenarios.find((s) => s.id === sid);
@@ -77,6 +80,7 @@ export default function App() {
             Untrusted content cannot cause tool calls or data flows outside the user's task contract.
           </div>
           <div className="ml-auto flex items-center gap-3">
+            <button onClick={() => setShowResults(true)} className="rounded-md border border-line px-2.5 py-0.5 text-[13px] font-semibold hover:border-mute">Results</button>
             <Counters runs={runs} />
             <ShieldToggle shield={shield} onChange={setShield} disabled={busy} />
           </div>
@@ -199,6 +203,7 @@ export default function App() {
         </section>
       </main>
 
+      {showResults && <ResultsModal onClose={() => setShowResults(false)} />}
       {current?.approval && current.shield === "on" && (
         <ApprovalModal key={current.approval.decision.decision_id} pending={current.approval} timeoutS={config?.approval_timeout_s ?? 120} onAnswer={answer} />
       )}

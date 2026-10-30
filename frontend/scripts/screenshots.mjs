@@ -80,6 +80,12 @@ await page.getByText(/chain intact|chain broken/).waitFor();
 results.push("audit: " + (await page.getByText(/chain intact|chain broken/).innerText()));
 await page.screenshot({ path: OUT + "audit.png" });
 
+await page.goto(`${BASE}/?results=1`);
+await page.getByText("attack variants stopped").waitFor();
+await page.waitForTimeout(400);
+await page.screenshot({ path: OUT + "results.png" });
+results.push("results panel: " + (await page.getByText(/^\d+\/\d+$/).first().innerText()) + " variants stopped");
+
 await browser.close();
 console.log(results.join("\n"));
 console.log(errors.length ? `CONSOLE ERRORS (${errors.length}):\n` + errors.join("\n") : "console errors: 0");
