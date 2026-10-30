@@ -73,6 +73,14 @@ Evaluated in order; **the first match wins**.
 | 7 | `TAINTED_BODY_TO_CONTRACT_RECIPIENT` | Tainted body, but every recipient is one you named | ALLOW (logged with its source) |
 | 8 | `IN_CONTRACT` | Everything else in the contract | ALLOW |
 
+**Optional: LLM-compiled contracts (`LLM_CONTRACT=1`).** The template compiler misses phrasings like *"let Priya know I'm in for Monday"*. With this flag, an LLM proposes the contract. It sees only the user's message and trusted names, and runs before any tool. Its JSON is then validated so it can only *narrow* what the user's words allow:
+
+- recipients must be named in the user's text;
+- the vault opens only on explicit vault words;
+- deleting files and fetching URLs need the rules compiler to agree.
+
+Any failure falls back to the rules. The UI shows a pill: "Contract: LLM-compiled, validated". The guard itself still never calls an LLM (`backend/guard/llm_contract.py`).
+
 **Shield OFF** doesn't remove the guard. It runs in **shadow mode**: the guard still decides and logs `would_have`, but every call executes. That gives the before/after.
 
 ## Results

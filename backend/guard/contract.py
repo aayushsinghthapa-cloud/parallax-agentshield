@@ -84,6 +84,7 @@ class TaskContract:
     urls: list[str]
     paths: list[str]
     literals: list[str] = field(default_factory=list)
+    compiled_by: str = "rules"  # "rules" | "llm (validated)" (LLM_CONTRACT=1 stretch)
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -102,6 +103,8 @@ class TaskContract:
         if "delete_files" in self.allowed_tools:
             out.append("Can delete: " + ", ".join(self.paths) + " (asks first)")
         out.append("Vault: open" if self.allow_vault else "Vault: locked")
+        if self.compiled_by.startswith("llm"):
+            out.append("Contract: LLM-compiled, validated")
         return out
 
     def _display(self, email: str) -> str:

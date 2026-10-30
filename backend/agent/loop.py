@@ -55,7 +55,8 @@ def classify_recipient(addr: str, world: World) -> dict:
 
 def run_agent(user_message: str, world: World, provider, planner_mode: str = "standard", *,
               shield: str = "none", emit: Emit | None = None, approve: Approve | None = None,
-              audit: AuditLog | None = None, session_id: str = "cli", run_id: str | None = None) -> dict:
+              audit: AuditLog | None = None, session_id: str = "cli", run_id: str | None = None,
+              contract=None) -> dict:
     run_id = run_id or "r-" + uuid.uuid4().hex[:10]
     emit = emit or (lambda ev, data: None)
     secrets = {k: v["value"] for k, v in world.vault.items()}
@@ -64,7 +65,8 @@ def run_agent(user_message: str, world: World, provider, planner_mode: str = "st
         emit(ev, {"run_id": run_id, **data})
 
     ws = load_workspace()
-    ctx = SessionContext(compile_contract(user_message, ws), ws)  # contract BEFORE any tool runs
+    # Contract BEFORE any tool runs, from the user's words only (a caller may pass an LLM-compiled one).
+    ctx = SessionContext(contract or compile_contract(user_message, ws), ws)
     if shield != "none":
         send("contract", contract=ctx.contract.to_dict(), pills=ctx.contract.pills(), shield=shield)
 

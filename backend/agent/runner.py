@@ -8,6 +8,8 @@ from backend.agent.loop import run_agent
 from backend.agent.provider import configured_providers
 from backend.agent.replay import Planner
 from backend.guard.audit import AuditLog
+from backend.guard.contract import load_workspace
+from backend.guard.llm_contract import compile_contract_llm
 from backend.scenarios import LIVE_MESSAGE, LIVE_SENDER, SCENARIOS
 from backend.tools.registry import World
 
@@ -39,8 +41,12 @@ def run(scenario_id: str, message: str, extra_emails: list[dict], shield: str, *
     # Free text and live payloads can't be replayed (nothing was recorded for them), so they go live.
     planner = Planner(configured_providers(), llm, scenario_id, shield, replay_delay_s)
     world = World(extra_emails=extra_emails, outbox_path=OUTBOX_PATH)
+    contract = None
+    if os.getenv("LLM_CONTRACT") == "1":  # stretch: LLM proposes, validation narrows, rules are the fallback
+        providers = configured_providers()
+        contract = compile_contract_llm(message, load_workspace(), providers[0] if providers else None)
     result = run_agent(message, world, planner, mode or planner_mode(), shield=shield, emit=emit,
-                       approve=approve, audit=audit, session_id=session_id, run_id=run_id)
+                       approve=approve, audit=audit, session_id=session_id, run_id=run_id, contract=contract)
     result["llm_mode"] = llm
     result["llm_source"] = planner.last_source
     return result, planner, world
