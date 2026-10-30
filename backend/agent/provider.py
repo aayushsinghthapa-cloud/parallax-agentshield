@@ -90,6 +90,9 @@ class Provider:
             kwargs["tool_choice"] = "auto"
         if "gpt-oss" in self.model:
             kwargs["reasoning_effort"] = "low"  # reasoning tokens count against TPM
+        if os.getenv("SIMULATE_RATE_LIMIT") == "1":  # demo/hardening check: behave like an exhausted free tier
+            self.stats["rate_limited"] += 1
+            raise ProviderUnavailable(f"{self.label} rate-limited (simulated)")
         for attempt in range(MAX_RETRIES + 1):
             self._pace(est)
             try:
@@ -109,6 +112,8 @@ class Provider:
                 continue
             except APIStatusError as e:
                 body = str(getattr(e, "body", "") or e)
+                if e.status_code in (401, 403, 404):  # bad key / model gone: try the next provider
+                    raise ProviderUnavailable(f"{self.label} refused ({e.status_code})") from e
                 if e.status_code == 400 and ("tool_use_failed" in body or "tool call" in body.lower()):
                     raise ToolCallFormatError(body[:300]) from e
                 if e.status_code >= 500 and attempt < MAX_RETRIES:

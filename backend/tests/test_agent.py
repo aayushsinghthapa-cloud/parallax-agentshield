@@ -163,3 +163,11 @@ def test_secrets_only_appear_in_the_leak_itself(tmp_path):
     leaky = [ev for ev, d in events if ev != "outbox" and key in json.dumps(d)]
     assert leaky == []
     assert key not in (tmp_path / "a.jsonl").read_text()
+
+
+def test_simulated_rate_limit_says_unavailable(monkeypatch):
+    from backend.agent.provider import Provider
+    monkeypatch.setenv("SIMULATE_RATE_LIMIT", "1")
+    p = Provider(name="groq", base_url="http://127.0.0.1:9", model="m", api_key="x")
+    res = run_agent("Reply to Priya.", World(), Planner([p], "live"), shield="on")
+    assert res["final"] == "Assistant unavailable — nothing was sent" and res["sent"] == []
