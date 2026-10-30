@@ -1,0 +1,55 @@
+# LEASH policy. The engine (guard/policy.py) is code; verdicts, wording and thresholds live here.
+# Rules are evaluated in exactly this order and the first match wins. The loader refuses
+# (and the guard then denies everything) if an id is missing, reordered or misspelled.
+version: "1.0.0"
+
+internal_domains: [nimbus.test]
+
+secret_match:
+  # A run of this many letters/digits from a vault secret counts as leaking it
+  # (catches keys split across fields or partially quoted).
+  min_fragment: 10
+  # Shortest base64/hex-looking token we try to decode when hunting for encoded secrets.
+  min_encoded_token: 12
+
+# Each rule has one or more variants; the engine picks the variant, YAML gives verdict + wording.
+# {placeholders} are filled by the engine with plain-language values only.
+rules:
+  - id: FAILSAFE
+    variants:
+      invalid: {verdict: DENY, plain: "I couldn't check this action safely, so I stopped it."}
+
+  - id: TOOL_NOT_IN_CONTRACT
+    variants:
+      default: {verdict: DENY, plain: "You didn't ask me to {action}, so I won't."}
+
+  - id: DESTRUCTIVE_ALWAYS_CONFIRM
+    variants:
+      default: {verdict: REQUIRE_APPROVAL, plain: "Deleting things can't be undone, so I need your OK first."}
+
+  - id: RECIPIENT_NOT_IN_CONTRACT
+    variants:
+      traced:  {verdict: DENY, plain: "This {what} came from {origin}, not from you."}
+      tainted: {verdict: DENY, plain: "You never gave me this {what}, and I've been reading outside content."}
+      clean:   {verdict: REQUIRE_APPROVAL, plain: "You didn't mention {target}. Please check before it goes out."}
+
+  - id: SECRET_TO_SINK
+    variants:
+      contains:    {verdict: REQUIRE_APPROVAL, plain: "This would send your {labels} (marked secret). Secrets leaving your workspace always need your OK."}
+      after_vault: {verdict: REQUIRE_APPROVAL, plain: "Your vault was opened in this task and this goes outside Nimbus Labs, so I need your OK."}
+
+  - id: URL_OR_IMAGE_IN_TAINTED_BODY
+    variants:
+      default: {verdict: REQUIRE_APPROVAL, plain: "This email has a link or image in it after I read outside content. Links can carry your data out, so please check."}
+
+  - id: EXTERNAL_DOMAIN_CONFIDENTIAL
+    variants:
+      default: {verdict: REQUIRE_APPROVAL, plain: "This would send content from a confidential document ({docs}) outside Nimbus Labs."}
+
+  - id: TAINTED_BODY_TO_CONTRACT_RECIPIENT
+    variants:
+      default: {verdict: ALLOW, plain: "Sending to {target}, who you asked for. It includes text from {origin}."}
+
+  - id: IN_CONTRACT
+    variants:
+      default: {verdict: ALLOW, plain: "This is part of what you asked for."}

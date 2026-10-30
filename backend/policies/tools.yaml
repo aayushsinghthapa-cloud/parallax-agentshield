@@ -1,0 +1,16 @@
+# Per-tool security metadata. The guard fails closed on any tool missing here.
+#   trust: trust level of the tool's OUTPUT. Any untrusted output taints the session for good.
+#   risk:  read | write | destructive
+#   sink:  true if the call can carry data out of the workspace (email, URLs)
+#   plain: how the tool is described to a non-technical user
+tools:
+  list_inbox:   {trust: untrusted, risk: read,        sink: false, plain: "look through your inbox"}
+  read_email:   {trust: untrusted, risk: read,        sink: false, plain: "read your emails"}
+  search_docs:  {trust: untrusted, risk: read,        sink: false, plain: "search your documents"}
+  read_doc:     {trust: untrusted, risk: read,        sink: false, plain: "open your documents"}
+  # Trusted (we own the vault) but sensitive: reading it marks the session vault_touched.
+  read_vault:   {trust: trusted, sensitive: true, risk: read, sink: false, plain: "open your password vault"}
+  send_email:   {trust: trusted,   risk: write,       sink: true,  plain: "send emails"}
+  # A fetched URL leaks whatever is in it (query strings, paths), so it is a sink too.
+  fetch_url:    {trust: untrusted, risk: read,        sink: true,  plain: "open web addresses"}
+  delete_files: {trust: trusted,   risk: destructive, sink: false, plain: "delete files"}
