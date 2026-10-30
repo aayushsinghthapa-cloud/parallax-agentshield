@@ -166,7 +166,8 @@ export function streamRun(req: RunRequest, onEvent: (ev: string, data: any) => v
     });
   }
   // EventSource reconnects by default, which would START THE RUN AGAIN. Never let it.
-  es.onerror = () => {
+  es.onerror = (e) => {
+    if ((e as MessageEvent).data) return; // the server's own "error" event also lands here; handled above
     if (es.readyState !== EventSource.CLOSED) {
       es.close();
       onEvent("error", { message: "Lost connection to the assistant. Nothing more will be sent." });

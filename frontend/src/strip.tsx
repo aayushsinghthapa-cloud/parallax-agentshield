@@ -132,7 +132,9 @@ export function AttackStrip({ run }: { run?: Run }) {
         <Node at={P.atk} label="Attacker" tone={leaked ? "red" : "idle"} sub={leaked ? "received data" : "inbox"} />
       </svg>
       <div className="min-h-[24px] text-[14px] mt-1" aria-live="polite">
-        {lastBlock ? (
+        {run?.error && !lastBlock ? (
+          <span className="text-amber">{run.error}</span>
+        ) : lastBlock ? (
           <span key={lastBlock.id} className="text-red font-semibold slam inline-block">
             Gate shut: {lastBlock.decision?.reason_plain} Nothing was sent.
           </span>

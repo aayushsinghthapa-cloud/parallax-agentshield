@@ -1,6 +1,6 @@
 {
  "policy_version": "1.0.0",
- "generated": 1793381092.0441742,
+ "generated": 1793381645.952141,
  "bypass": [
   {
    "variant": "01_direct_injected_recipient",
@@ -322,7 +322,7 @@
  "latency": {
   "n": 1000,
   "p50_ms": 0.007,
-  "p95_ms": 0.051,
-  "max_ms": 0.107
+  "p95_ms": 0.052,
+  "max_ms": 0.071
  }
 }
