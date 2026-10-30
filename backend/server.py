@@ -18,11 +18,12 @@ from pathlib import Path
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from backend.agent import runner
 from backend.agent.provider import configured_providers, key_status
-from backend.agent.replay import is_scripted
+from backend.agent.replay import is_scripted, replay_path
 from backend.guard.audit import AuditLog
 from backend.guard.contract import compile_contract, load_workspace
 from backend.scenarios import SCENARIOS
@@ -38,6 +39,17 @@ audit = AuditLog()
 _approvals: dict[str, dict] = {}  # decision_id -> {"event": Event, "choice": str | None}
 _mailbox: list[dict] = []  # every outbox event this server has seen (UI: outbox + attacker's inbox)
 _lock = threading.Lock()
+# Public deployments: runs that call the real LLM share one provider list (so rate-limit pacing is
+# shared) and at most MAX_LIVE_RUNS run at once; replayed runs are free and unlimited.
+_live_slots = threading.BoundedSemaphore(int(os.getenv("MAX_LIVE_RUNS", "1")))
+_providers: list | None = None
+
+
+def _shared_providers() -> list:
+    global _providers
+    if _providers is None:
+        _providers = runner.configured_providers()
+    return _providers
 
 
 class ApproveBody(BaseModel):
@@ -88,15 +100,29 @@ def run_stream(scenario: str | None = None, message: str | None = None, payload:
             _approvals.pop(decision["decision_id"], None)
         return slot["choice"] if answered and slot["choice"] == "approve" else "deny"
 
+    mode = llm or runner.llm_mode()
+    needs_llm = mode != "replay" or not replay_path(sid, shield).exists()
+
     def work() -> None:
+        got_slot = False
         try:
+            if needs_llm:
+                got_slot = _live_slots.acquire(timeout=45)
+                if not got_slot:
+                    q.put(("error", {"run_id": run_id, "message": "The assistant is busy with another live run. Try again in a moment. Nothing was sent."}))
+                    q.put(("done", {"run_id": run_id, "scenario": sid, "shield": shield, "error": "busy"}))
+                    return
             result, _, _ = runner.run(sid, msg, extra, shield, emit=emit, approve=approve, audit=audit,
-                                      session_id="ui", run_id=run_id, llm=llm, replay_delay_s=REPLAY_DELAY_S)
+                                      session_id="ui", run_id=run_id, llm=llm, replay_delay_s=REPLAY_DELAY_S,
+                                      providers=_shared_providers())
             q.put(("done", {"run_id": run_id, "scenario": sid, "shield": shield, "llm_source": result["llm_source"],
                             "calls": result["calls"], "error": result["error"]}))
         except Exception as e:  # never leave the browser hanging
             q.put(("error", {"run_id": run_id, "message": runner_error_text(), "detail": f"{type(e).__name__}: {e}"}))
             q.put(("done", {"run_id": run_id, "scenario": sid, "shield": shield, "error": "exception"}))
+        finally:
+            if got_slot:
+                _live_slots.release()
 
     threading.Thread(target=work, daemon=True).start()
 
@@ -167,3 +193,10 @@ def reset():
     with _lock:
         _mailbox.clear()
     return {"ok": True}
+
+
+# Serve the built UI from the same origin when it exists (single-service deployment, e.g. Render).
+# Mounted last so every /api route above wins.
+_DIST = Path(__file__).resolve().parent.parent / "frontend" / "dist"
+if _DIST.is_dir():
+    app.mount("/", StaticFiles(directory=_DIST, html=True), name="ui")

@@ -14,6 +14,7 @@ from backend.scenarios import LIVE_MESSAGE, LIVE_SENDER, SCENARIOS
 from backend.tools.registry import World
 
 OUTBOX_PATH = Path(__file__).resolve().parent.parent / "outbox.jsonl"
+MAX_INPUT_CHARS = int(os.getenv("MAX_INPUT_CHARS", "1500"))  # keeps every request inside the free-tier budget
 
 
 def planner_mode() -> str:
@@ -27,19 +28,20 @@ def llm_mode() -> str:
 def resolve(scenario: str | None, message: str | None = None, payload: str | None = None) -> tuple[str, str, list[dict]]:
     """-> (scenario_id, user message, extra inbox emails)."""
     if payload is not None:
-        email = {"id": 8, "from": LIVE_SENDER, "date": "2026-10-31 11:00", "subject": "New message", "body": payload[:2000]}
+        email = {"id": 8, "from": LIVE_SENDER, "date": "2026-10-31 11:00", "subject": "New message", "body": payload[:MAX_INPUT_CHARS]}
         return "LIVE", LIVE_MESSAGE, [email]
     if scenario in SCENARIOS:
         return scenario, SCENARIOS[scenario]["message"], []
-    return "custom", (message or "").strip(), []
+    return "custom", (message or "").strip()[:MAX_INPUT_CHARS], []
 
 
 def run(scenario_id: str, message: str, extra_emails: list[dict], shield: str, *, emit=None, approve=None,
         audit: AuditLog | None = None, session_id: str = "cli", run_id: str | None = None,
-        mode: str | None = None, llm: str | None = None, replay_delay_s: float = 0.0) -> tuple[dict, Planner, World]:
+        mode: str | None = None, llm: str | None = None, replay_delay_s: float = 0.0,
+        providers: list | None = None) -> tuple[dict, Planner, World]:
     llm = llm or llm_mode()
     # Free text and live payloads can't be replayed (nothing was recorded for them), so they go live.
-    planner = Planner(configured_providers(), llm, scenario_id, shield, replay_delay_s)
+    planner = Planner(configured_providers() if providers is None else providers, llm, scenario_id, shield, replay_delay_s)
     world = World(extra_emails=extra_emails, outbox_path=OUTBOX_PATH)
     contract = None
     if os.getenv("LLM_CONTRACT") == "1":  # stretch: LLM proposes, validation narrows, rules are the fallback

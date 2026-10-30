@@ -145,6 +145,21 @@ backend/.venv/bin/python backend/scripts/run_scenario.py S1,S3,S4,S5 --llm recor
 backend/.venv/bin/python backend/scripts/script_s2.py
 ```
 
+### Deploy (Render, free)
+
+The repo has a `Dockerfile` (one service: FastAPI serves the API and the built UI) and a `render.yaml` blueprint.
+
+1. Go to https://dashboard.render.com → **New** → **Blueprint**, and pick this repo.
+2. When asked, paste `GROQ_API_KEY`. This is optional: without it the five scenarios still run from recordings, and only free text and the live payload box need it.
+3. Deploy. The app is served at `https://<service>.onrender.com`.
+
+Public-URL safety:
+- at most `MAX_LIVE_RUNS` (default 1) live LLM runs at a time, sharing one rate-limit budget;
+- inputs are capped at 1,500 characters;
+- replayed runs are unlimited.
+
+The free plan sleeps after 15 minutes idle. Open the URL a minute before judging to wake it.
+
 ### Useful commands
 
 ```bash

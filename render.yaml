@@ -1,0 +1,22 @@
+# Render Blueprint: New -> Blueprint -> pick this repo. Paste GROQ_API_KEY when asked (optional:
+# without it the scenarios still run from recordings; only free text and the live payload need it).
+services:
+  - type: web
+    name: parallax-agentshield
+    runtime: docker
+    plan: free
+    healthCheckPath: /api/config
+    autoDeploy: true
+    envVars:
+      - key: GROQ_API_KEY
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: LLM_MODE
+        value: replay
+      - key: PLANNER_MODE
+        value: permissive
+      - key: PROVIDER_ORDER
+        value: groq,gemini
+      - key: MAX_LIVE_RUNS
+        value: "1"

@@ -129,6 +129,7 @@ export default function App() {
               value={text}
               onChange={(e) => setText(e.target.value)}
               placeholder="Ask the assistant…"
+              maxLength={1500}
               className="flex-1 min-w-0 rounded-lg bg-panel2 border border-line px-3 py-2 text-[15px] outline-none focus:border-mute"
             />
             <button disabled={busy || !text.trim()} className="rounded-lg bg-ink text-bg font-bold px-3 disabled:opacity-40">Send</button>
@@ -154,6 +155,7 @@ export default function App() {
               onChange={(e) => setPayload(e.target.value)}
               rows={2}
               placeholder="Type any injection you like, judges welcome"
+              maxLength={1500}
               className="mt-1 w-full rounded-md bg-bg border border-line px-2 py-1.5 text-[14px] font-mono outline-none focus:border-red/60 resize-none"
             />
             <button
