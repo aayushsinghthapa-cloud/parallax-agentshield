@@ -152,6 +152,8 @@ def compile_contract(user_message: str, ws: Workspace) -> TaskContract:
     sends = bool(_SEND_VERBS.search(msg)) or (bool(_EMAIL_VERB.search(msg)) and bool(allowed_recipients))
     if sends:
         tools += ["send_email", *READ_INBOX]  # replying usually needs the inbox
+    if re.search(r"\b(handle|deal with|take care of)\b", msg, re.I):
+        tools += READ_DOCS  # open-ended chores may need docs; reads are never a sink
     if allow_vault:
         tools.append("read_vault")
     if urls and _FETCH_VERBS.search(msg):

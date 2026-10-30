@@ -24,6 +24,7 @@ DEFAULTS = {
         "base_url": "https://generativelanguage.googleapis.com/v1beta/openai/",
         "model": "gemini-3.5-flash",
         "tpm": 30000,
+        "rpm": 5,  # free tier is requests-per-minute bound well before it is token bound
     },
 }
 MAX_RETRIES = 3
@@ -44,6 +45,7 @@ class Provider:
     model: str
     api_key: str = field(repr=False)
     tpm: int = 0
+    rpm: int = 0
     stats: dict = field(default_factory=lambda: {"requests": 0, "tokens": 0, "rate_limited": 0})
     _window: collections.deque = field(default_factory=collections.deque, repr=False)
     _client: OpenAI | None = field(default=None, repr=False)
@@ -59,7 +61,11 @@ class Provider:
         return self._client
 
     def _pace(self, est_tokens: int) -> None:
-        """Sleep until the last-60s token total leaves room for this request."""
+        """Sleep until the last-60s token total (and request count) leaves room for this request."""
+        if self.rpm and self._window:
+            wait = 60 / self.rpm - (time.time() - self._window[-1][0])
+            if wait > 0:
+                time.sleep(wait)
         if not self.tpm:
             return
         while True:
@@ -129,6 +135,7 @@ def _provider_from_env(name: str, model: str | None = None) -> Provider | None:
         model=model or os.getenv(f"{p}_MODEL", d.get("model", "")),
         api_key=key,
         tpm=int(os.getenv(f"{p}_TPM", d.get("tpm", 0))),
+        rpm=int(os.getenv(f"{p}_RPM", d.get("rpm", 0))),
     )
 
 
